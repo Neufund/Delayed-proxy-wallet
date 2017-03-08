@@ -17,4 +17,6 @@ contract Callable {
     function singleArgument(uint x) {
 
     }
+
+    function() payable {}
 }

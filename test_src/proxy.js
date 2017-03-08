@@ -3,15 +3,34 @@ let DelayedProxy = async function (instance_to_proxy) {
     let delayedProxyContract = await DelayedProxyContract.deployed();
     let functionNames = instance_to_proxy.abi.filter(abi_entry => abi_entry.type === "function")
         .map(abi_entry => abi_entry.name);
-    let proxifiedFunctionCall = (arg_converter) => {
-        return function () {
-            let args = [...arguments];
-            let transactionObject = args.pop();
-            return delayedProxyContract.execute(instance_to_proxy.address, arg_converter.apply(null, args), transactionObject);
+    let extractValue = function (transactionObject) {
+        let value = 0;
+        if (transactionObject && transactionObject.value) {
+            value = transactionObject["value"];
+            delete transactionObject["value"];
+        }
+        return value;
+    };
+    let makeConfirmer = function(id){
+        return function(){
+            return delayedProxyContract.confirm(id);
         }
     };
-    let proxifiedSend = function (transactionObject) {
-        return delayedProxyContract.execute(instance_to_proxy.address, "", transactionObject);
+    let execute = async function (address, value, data, transactionObject) {
+        let tx = await delayedProxyContract.execute(address, value, data, transactionObject);
+        return makeConfirmer(tx.logs[0].args.operation);
+    };
+    let proxifiedFunctionCall = (arg_converter) => {
+        return async function () {
+            let args = [...arguments];
+            let transactionObject = args.pop();
+            let value = extractValue(transactionObject);
+            return execute(instance_to_proxy.address, value, arg_converter.apply(null, args), transactionObject);
+        }
+    };
+    let proxifiedSend = async function (transactionObject) {
+        const value = extractValue(transactionObject);
+        return execute(instance_to_proxy.address, value, "", transactionObject);
     };
     let handler = {
         get (target, key) {

@@ -1,64 +1,49 @@
 import "babel-polyfill";
 import DelayedProxy from "./proxy";
-var RejectPayment = artifacts.require("./RejectPayment.sol");
-var AcceptPayment = artifacts.require("./AcceptPayment.sol");
+let DelayedProxyContract = artifacts.require("./DelayedProxy");
 var Callable = artifacts.require("./Callable.sol");
 var assert = require("assert");
 
 contract('DelayedProxy', function (accounts) {
+    beforeEach(function (done) {
+        web3.eth.defaultAccount = accounts[0];
+        DelayedProxyContract.deployed().then(function (delayedProxy) {
+            web3.eth.sendTransaction({
+                to: delayedProxy.address,
+                value: web3.toWei('5', 'ether')
+            }, done);
+        })
+    });
     describe("#sendValue", function () {
-        it("throws on failure", async function () {
-            let rejectPayment = await RejectPayment.deployed();
-            let delayedRejectPayment = await DelayedProxy(rejectPayment);
-            try {
-                let tx = await delayedRejectPayment.send({
-                    from: accounts[0],
-                    value: web3.toWei('1', 'ether')
-                });
-            } catch (e) {
-                assert(e.message.startsWith("VM Exception while processing transaction"));
-            }
-        });
         it("succeeds for a contract", async function () {
-            let acceptPayment = await AcceptPayment.deployed();
-            let delayedAcceptPayment = await DelayedProxy(acceptPayment);
-            let tx = await delayedAcceptPayment.send({
-                from: accounts[0],
+            let callable = await Callable.deployed();
+            let delayedCallable = await DelayedProxy(callable);
+            let confirmer = await delayedCallable.send({
                 value: web3.toWei('1', 'ether')
             });
-            assert.equal(tx.logs[0].event, "logExecute");
+            let tx = await confirmer();
         });
     });
     describe("#callFunction", function () {
-        it("throws on failure", async function () {
-            let callable = await Callable.deployed();
-            let delayedCallable = await DelayedProxy(callable);
-            try {
-                await delayedCallable.throwable({from: accounts[0]});
-            } catch (e) {
-                assert(e.message.startsWith("VM Exception while processing transaction"));
-            }
-        });
         it("succeeds without value", async function () {
             let callable = await Callable.deployed();
             let delayedCallable = await DelayedProxy(callable);
-            let tx = await delayedCallable.okable({from: accounts[0]});
-            assert.equal(tx.logs[0].event, "logExecute");
+            let confirmer = await delayedCallable.okable();
+            let tx = await confirmer();
         });
         it("succeeds with value", async function () {
             let callable = await Callable.deployed();
             let delayedCallable = await DelayedProxy(callable);
-            let tx = await delayedCallable.payment({
-                from: accounts[0],
+            let confirmer = await delayedCallable.payment({
                 value: web3.toWei('1', 'ether')
             });
-            assert.equal(tx.logs[0].event, "logExecute");
+            let tx = await confirmer();
         });
         it("succeeds with arguments", async function () {
             let callable = await Callable.deployed();
             let delayedCallable = await DelayedProxy(callable);
-            let tx = await delayedCallable.singleArgument(42, {from: accounts[0]});
-            assert.equal(tx.logs[0].event, "logExecute");
+            let confirmer = await delayedCallable.singleArgument(42);
+            let tx = await confirmer();
         });
     });
 });
