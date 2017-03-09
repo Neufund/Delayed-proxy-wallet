@@ -4,7 +4,7 @@ let DelayedProxyContract = artifacts.require("./DelayedProxy");
 var Callable = artifacts.require("./Callable.sol");
 var assert = require("assert");
 
-contract('DelayedProxy', function (accounts) {
+contract('Callable', function (accounts) {
     beforeEach(function (done) {
         web3.eth.defaultAccount = accounts[0];
         DelayedProxyContract.deployed().then(function (delayedProxy) {

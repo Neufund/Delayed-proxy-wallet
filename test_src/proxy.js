@@ -11,8 +11,8 @@ let DelayedProxy = async function (instance_to_proxy) {
         }
         return value;
     };
-    let makeConfirmer = function(id){
-        return function(){
+    let makeConfirmer = function (id) {
+        return function () {
             return delayedProxyContract.confirm(id);
         }
     };
@@ -23,8 +23,12 @@ let DelayedProxy = async function (instance_to_proxy) {
     let proxifiedFunctionCall = (arg_converter) => {
         return async function () {
             let args = [...arguments];
-            let transactionObject = args.pop();
-            let value = extractValue(transactionObject);
+            let value = 0;
+            let transactionObject = {};
+            if (args.length && args[args.length - 1] instanceof Object) {
+                transactionObject = args.pop();
+                value = extractValue(transactionObject);
+            }
             return execute(instance_to_proxy.address, value, arg_converter.apply(null, args), transactionObject);
         }
     };
