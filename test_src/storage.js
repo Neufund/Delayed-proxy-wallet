@@ -23,21 +23,11 @@ contract('Storage', function (accounts) {
             // set values
             await storage.setStorage("user");
             await ((await delayedStorage.setStorage("proxy"))());
-            // watch logs
-            let getMyStorageEvent = storage.logGetMyStorage(()=> {
-            });
             // get storage by address
             assert.equal(await storage.getStorage(web3.eth.defaultAccount), "user");
             assert.equal(await storage.getStorage(delayedProxy.address), "proxy");
-            // get storage of caller
-            let tx = await ((await delayedStorage.getMyStorage())());
-            // get emited logs
-            let logs = getMyStorageEvent.get();
-            assert.equal(logs.length, 1);
-            assert.equal(logs[0].event, 'logGetMyStorage');
-            assert.equal(logs[0].args._s, "proxy");
-            // stop watching
-            getMyStorageEvent.stopWatching();
+            assert.equal(await storage.getMyStorage(), "user");
+            assert.equal(await delayedStorage.getMyStorage(), "proxy");
         });
     });
 });
