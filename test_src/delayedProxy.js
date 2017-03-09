@@ -10,7 +10,7 @@ contract('DelayedProxy', function (accounts) {
         DelayedProxyContract.deployed().then(function (delayedProxy) {
             web3.eth.sendTransaction({
                 to: delayedProxy.address,
-                value: web3.toWei('5', 'ether')
+                value: web3.toWei('2', 'ether')
             }, done);
         })
     });
@@ -30,6 +30,10 @@ contract('DelayedProxy', function (accounts) {
             let delayedCallable = await DelayedProxy(callable);
             let confirmer = await delayedCallable.okable();
             let tx = await confirmer();
+            assert.equal(tx.logs[0].event, "Transact");
+            assert.equal(tx.logs[0].args.value, 0);
+            assert.equal(tx.logs[0].args.to, callable.address);
+            assert.equal(tx.logs[0].args.owner, web3.eth.defaultAccount);
         });
         it("succeeds with value", async function () {
             let callable = await Callable.deployed();
@@ -38,12 +42,20 @@ contract('DelayedProxy', function (accounts) {
                 value: web3.toWei('1', 'ether')
             });
             let tx = await confirmer();
+            assert.equal(tx.logs[0].event, "Transact");
+            assert.equal(tx.logs[0].args.value, web3.toWei('1', 'ether'));
+            assert.equal(tx.logs[0].args.to, callable.address);
+            assert.equal(tx.logs[0].args.owner, web3.eth.defaultAccount);
         });
         it("succeeds with arguments", async function () {
             let callable = await Callable.deployed();
             let delayedCallable = await DelayedProxy(callable);
             let confirmer = await delayedCallable.singleArgument(42);
             let tx = await confirmer();
+            assert.equal(tx.logs[0].event, "Transact");
+            assert.equal(tx.logs[0].args.value, 0);
+            assert.equal(tx.logs[0].args.to, callable.address);
+            assert.equal(tx.logs[0].args.owner, web3.eth.defaultAccount);
         });
     });
 });

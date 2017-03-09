@@ -11,9 +11,9 @@ contract DelayedProxy {
 // Funds has arrived into the wallet (record how much).
     event Deposit(address _from, uint value);
 // Single transaction going out of the wallet (record who signed for it, how much, and to whom it's going).
-    event Transact(address owner, bytes32 hash, uint value, address to, bytes data);
+    event Transact(address owner, uint txId, uint value, address to, bytes data);
 // Confirmation still needed for a transaction.
-    event ConfirmationNeeded(bytes32 operation, address initiator, address to, uint value, bytes data);
+    event ConfirmationNeeded(uint txId, address initiator, address to, uint value, bytes data);
 
 
     function() payable {
@@ -22,28 +22,30 @@ contract DelayedProxy {
         }
     }
 
-    function execute(address _to, uint _value, bytes _data) external returns (bytes32 _r) {
-        _r = sha3(_to, _value, _data, block.number);
-        transactions[_r] = Transaction(_to, _value, _data);
-        ConfirmationNeeded(_r, msg.sender, _to, _value, _data);
+    function execute(address _to, uint _value, bytes _data) external returns (uint txId) {
+        txId = transactionCount++;
+        transactions[txId] = Transaction(_to, _value, _data);
+        ConfirmationNeeded(txId, msg.sender, _to, _value, _data);
     }
 
-    modifier txExists(bytes32 _h){
-        if (transactions[_h].to == 0) {
+    modifier txExists(uint txId){
+        if (transactions[txId].to == 0) {
             throw;
         }
         _;
     }
 
-    function confirm(bytes32 _h) external txExists(_h) returns (bool) {
-        if (!transactions[_h].to.call.value(transactions[_h].value)(transactions[_h].data)) {
+    function confirm(uint txId) external txExists(txId) returns (bool) {
+        if (!transactions[txId].to.call.value(transactions[txId].value)(transactions[txId].data)) {
             throw;
         }
-        Transact(msg.sender, _h, transactions[_h].value, transactions[_h].to, transactions[_h].data);
-        delete transactions[_h];
+        Transact(msg.sender, txId, transactions[txId].value, transactions[txId].to, transactions[txId].data);
+        delete transactions[txId];
         return true;
     }
 
 // pending transactions we have at present.
-    mapping (bytes32 => Transaction) public transactions;
+    uint transactionCount;
+
+    mapping (uint => Transaction) public transactions;
 }

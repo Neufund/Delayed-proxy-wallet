@@ -18,7 +18,7 @@ let DelayedProxy = async function (instance_to_proxy) {
     };
     let execute = async function (address, value, data, transactionObject) {
         let tx = await delayedProxyContract.execute(address, value, data, transactionObject);
-        return makeConfirmer(tx.logs[0].args.operation);
+        return makeConfirmer(tx.logs[0].args.txId);
     };
     let proxifiedFunctionCall = (arg_converter) => {
         return async function () {
