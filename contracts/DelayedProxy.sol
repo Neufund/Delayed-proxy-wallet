@@ -23,19 +23,27 @@ contract DelayedProxy {
     }
 
     function execute(address _to, uint _value, bytes _data) external returns (bytes32 _r) {
-        _r = sha3(msg.data, block.number);
+        _r = sha3(_to, _value, _data, block.number);
+        transactions[_r] = Transaction(_to, _value, _data);
         ConfirmationNeeded(_r, msg.sender, _to, _value, _data);
     }
 
-    function confirm(bytes32 _h) returns (bool) {
-        if (!txs[_h].to.call.value(txs[_h].value)(txs[_h].data)) {
+    modifier txExists(bytes32 _h){
+        if (transactions[_h].to == 0) {
             throw;
         }
-        Transact(msg.sender, _h, txs[_h].value, txs[_h].to, txs[_h].data);
-        delete txs[_h];
+        _;
+    }
+
+    function confirm(bytes32 _h) external txExists(_h) returns (bool) {
+        if (!transactions[_h].to.call.value(transactions[_h].value)(transactions[_h].data)) {
+            throw;
+        }
+        Transact(msg.sender, _h, transactions[_h].value, transactions[_h].to, transactions[_h].data);
+        delete transactions[_h];
         return true;
     }
 
 // pending transactions we have at present.
-    mapping (bytes32 => Transaction) txs;
+    mapping (bytes32 => Transaction) public transactions;
 }
