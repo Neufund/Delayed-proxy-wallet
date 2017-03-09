@@ -9,11 +9,11 @@ contract DelayedProxy {
     }
 
 // Funds has arrived into the wallet (record how much).
-    event Deposit(address _from, uint value);
+    event Deposit(address indexed _from, uint indexed value);
 // Single transaction going out of the wallet (record who signed for it, how much, and to whom it's going).
-    event Transact(address owner, uint txId, uint value, address to, bytes data);
+    event Transact(address indexed owner, uint txId, uint indexed value, address indexed to, bytes data);
 // Confirmation still needed for a transaction.
-    event ConfirmationNeeded(uint txId, address initiator, address to, uint value, bytes data);
+    event ConfirmationNeeded(uint txId, address indexed initiator, address indexed to, uint indexed value, bytes data);
 
 
     function() payable {
@@ -22,7 +22,7 @@ contract DelayedProxy {
         }
     }
 
-    function execute(address _to, uint _value, bytes _data) external returns (uint txId) {
+    function execute(address _to, uint _value, bytes _data) returns (uint txId) {
         txId = transactionCount++;
         transactions[txId] = Transaction(_to, _value, _data);
         ConfirmationNeeded(txId, msg.sender, _to, _value, _data);
@@ -35,7 +35,7 @@ contract DelayedProxy {
         _;
     }
 
-    function confirm(uint txId) external txExists(txId) returns (bool) {
+    function confirm(uint txId) txExists(txId) returns (bool) {
         if (!transactions[txId].to.call.value(transactions[txId].value)(transactions[txId].data)) {
             throw;
         }
@@ -45,7 +45,7 @@ contract DelayedProxy {
     }
 
 // pending transactions we have at present.
-    uint transactionCount;
+    uint public transactionCount;
 
     mapping (uint => Transaction) public transactions;
 }
